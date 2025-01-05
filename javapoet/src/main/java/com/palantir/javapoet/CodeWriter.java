@@ -280,73 +280,46 @@ final class CodeWriter {
         while (partIterator.hasNext()) {
             String part = partIterator.next();
             switch (part) {
-                case "$L":
-                    emitLiteral(codeBlock.args().get(a++));
-                    break;
-
-                case "$N":
-                    emitAndIndent((String) codeBlock.args().get(a++));
-                    break;
-
-                case "$S":
+                case "$L" -> emitLiteral(codeBlock.args().get(a++));
+                case "$N" -> emitAndIndent((String) codeBlock.args().get(a++));
+                case "$S" -> {
                     String string = (String) codeBlock.args().get(a++);
                     // Emit null as a literal null: no quotes.
                     emitAndIndent(string != null ? stringLiteralWithDoubleQuotes(string, indent) : "null");
-                    break;
-
-                case "$T":
+                }
+                case "$T" -> {
                     TypeName typeName = (TypeName) codeBlock.args().get(a++);
                     // defer "typeName.emit(this)" if next format part will be handled by the default case
-                    if (typeName instanceof ClassName && partIterator.hasNext()) {
-                        if (!codeBlock
-                                .formatParts()
-                                .get(partIterator.nextIndex())
-                                .startsWith("$")) {
-                            ClassName candidate = (ClassName) typeName;
-                            if (staticImportClassNames.contains(candidate.canonicalName())) {
-                                checkState(deferredTypeName == null, "pending type for static import?!");
-                                deferredTypeName = candidate;
-                                break;
-                            }
-                        }
+                    if (typeName instanceof ClassName candidate
+                            && partIterator.hasNext()
+                            && !codeBlock
+                                    .formatParts()
+                                    .get(partIterator.nextIndex())
+                                    .startsWith("$")
+                            && staticImportClassNames.contains(candidate.canonicalName())) {
+                        checkState(deferredTypeName == null, "pending type for static import?!");
+                        deferredTypeName = candidate;
+                        break;
                     }
                     typeName.emit(this);
-                    break;
-
-                case "$$":
-                    emitAndIndent("$");
-                    break;
-
-                case "$>":
-                    indent();
-                    break;
-
-                case "$<":
-                    unindent();
-                    break;
-
-                case "$[":
+                }
+                case "$$" -> emitAndIndent("$");
+                case "$>" -> indent();
+                case "$<" -> unindent();
+                case "$[" -> {
                     checkState(statementLine == -1, "statement enter $[ followed by statement enter $[");
                     statementLine = 0;
-                    break;
-
-                case "$]":
+                }
+                case "$]" -> {
                     checkState(statementLine != -1, "statement exit $] has no matching statement enter $[");
                     if (statementLine > 0) {
                         unindent(2); // End a multi-line statement. Decrease the indentation level.
                     }
                     statementLine = -1;
-                    break;
-
-                case "$W":
-                    out.wrappingSpace(indentLevel + 2);
-                    break;
-
-                case "$Z":
-                    out.zeroWidthSpace(indentLevel + 2);
-                    break;
-
-                default:
+                }
+                case "$W" -> out.wrappingSpace(indentLevel + 2);
+                case "$Z" -> out.zeroWidthSpace(indentLevel + 2);
+                default -> {
                     // handle deferred type
                     if (deferredTypeName != null) {
                         if (part.startsWith(".")) {
@@ -360,7 +333,7 @@ final class CodeWriter {
                         deferredTypeName = null;
                     }
                     emitAndIndent(part);
-                    break;
+                }
             }
         }
         if (ensureTrailingNewline && out.lastChar() != '\n') {

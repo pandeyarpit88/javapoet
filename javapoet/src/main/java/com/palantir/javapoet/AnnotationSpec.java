@@ -133,22 +133,18 @@ public final class AnnotationSpec {
             Arrays.sort(methods, Comparator.comparing(Method::getName));
             for (Method method : methods) {
                 Object value = method.invoke(annotation);
-                if (!includeDefaultValues) {
-                    if (Objects.deepEquals(value, method.getDefaultValue())) {
-                        continue;
-                    }
+                if (!includeDefaultValues && Objects.deepEquals(value, method.getDefaultValue())) {
+                    continue;
                 }
                 if (value.getClass().isArray()) {
                     for (int i = 0; i < Array.getLength(value); i++) {
                         builder.addMemberForValue(method.getName(), Array.get(value, i));
                     }
-                    continue;
-                }
-                if (value instanceof Annotation annotationValue) {
+                } else if (value instanceof Annotation annotationValue) {
                     builder.addMember(method.getName(), "$L", get(annotationValue));
-                    continue;
+                } else {
+                    builder.addMemberForValue(method.getName(), value);
                 }
-                builder.addMemberForValue(method.getName(), value);
             }
         } catch (Exception e) {
             throw new RuntimeException("Reflecting " + annotation + " failed!", e);
@@ -179,9 +175,7 @@ public final class AnnotationSpec {
 
     public Builder toBuilder() {
         Builder builder = new Builder(type);
-        for (Map.Entry<String, List<CodeBlock>> entry : members.entrySet()) {
-            builder.members.put(entry.getKey(), new ArrayList<>(entry.getValue()));
-        }
+        members.forEach((key, value) -> builder.members.put(key, new ArrayList<>(value)));
         return builder;
     }
 

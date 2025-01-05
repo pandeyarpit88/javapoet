@@ -125,25 +125,18 @@ final class LineWrapper {
     /** Write the space followed by any buffered text that follows it. */
     private void flush(FlushType flushType) throws IOException {
         switch (flushType) {
-            case WRAP:
+            case WRAP -> {
                 out.append('\n');
-                for (int i = 0; i < indentLevel; i++) {
-                    out.append(indent);
-                }
-                column = indentLevel * indent.length();
-                column += buffer.length();
-                break;
-            case SPACE:
-                out.append(' ');
-                break;
-            case EMPTY:
-                break;
-            default:
-                throw new IllegalArgumentException("Unknown FlushType: " + flushType);
+                out.append(indent.repeat(indentLevel));
+                column = indentLevel * indent.length() + buffer.length();
+            }
+            case SPACE -> out.append(' ');
+            case EMPTY -> {}
+            default -> throw new IllegalArgumentException("Unknown FlushType: " + flushType);
         }
 
         out.append(buffer);
-        buffer.delete(0, buffer.length());
+        buffer.setLength(0);
         indentLevel = -1;
         nextFlush = null;
     }

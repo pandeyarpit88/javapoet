@@ -116,21 +116,15 @@ final class Util {
         result.append('"');
         for (int i = 0; i < value.length(); i++) {
             char c = value.charAt(i);
-            // trivial case: single quote must not be escaped
-            if (c == '\'') {
-                result.append("'");
-                continue;
-            }
-            // trivial case: double quotes must be escaped
-            if (c == '\"') {
-                result.append("\\\"");
-                continue;
-            }
-            // default case: just let character literal do its work
-            result.append(characterLiteralWithoutSingleQuotes(c));
-            // need to append indent after linefeed?
-            if (c == '\n' && i + 1 < value.length()) {
-                result.append("\"\n").append(indent).append(indent).append("+ \"");
+            switch (c) {
+                case '\'' -> result.append("'");
+                case '\"' -> result.append("\\\"");
+                default -> {
+                    result.append(characterLiteralWithoutSingleQuotes(c));
+                    if (c == '\n' && i + 1 < value.length()) {
+                        result.append("\"\n").append(indent).append(indent).append("+ \"");
+                    }
+                }
             }
         }
         result.append('"');

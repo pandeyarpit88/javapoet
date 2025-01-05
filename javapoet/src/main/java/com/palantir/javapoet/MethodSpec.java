@@ -24,6 +24,7 @@ import java.io.UncheckedIOException;
 import java.lang.reflect.Type;
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.Iterator;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
@@ -144,47 +145,29 @@ public final class MethodSpec {
             codeWriter.emit(" ");
         }
 
-        if (compactConstructor) {
-            codeWriter.emit("$L", enclosingName);
-        } else if (isConstructor()) {
-            codeWriter.emit("$L", enclosingName);
-            codeWriter.emitParameters(parameters, varargs);
-        } else {
-            codeWriter.emit("$T $L", returnType, name);
-            codeWriter.emitParameters(parameters, varargs);
-        }
+        codeWriter.emit(compactConstructor || isConstructor() ? "$L" : "$T $L", enclosingName, returnType, name);
+        codeWriter.emitParameters(parameters, varargs);
 
         if (defaultValue != null && !defaultValue.isEmpty()) {
-            codeWriter.emit(" default ");
-            codeWriter.emit(defaultValue);
+            codeWriter.emit(" default ").emit(defaultValue);
         }
 
         if (!exceptions.isEmpty()) {
             codeWriter.emitWrappingSpace().emit("throws");
-            boolean firstException = true;
-            for (TypeName exception : exceptions) {
-                if (!firstException) {
+            for (Iterator<TypeName> it = exceptions.iterator(); it.hasNext(); ) {
+                codeWriter.emitWrappingSpace().emit("$T", it.next());
+                if (it.hasNext()) {
                     codeWriter.emit(",");
                 }
-                codeWriter.emitWrappingSpace().emit("$T", exception);
-                firstException = false;
             }
         }
 
         if (modifiers.contains(Modifier.ABSTRACT)) {
             codeWriter.emit(";\n");
         } else if (modifiers.contains(Modifier.NATIVE)) {
-            // Code is allowed to support stuff like GWT JSNI.
-            codeWriter.emit(code);
-            codeWriter.emit(";\n");
+            codeWriter.emit(code).emit(";\n");
         } else {
-            codeWriter.emit(" {\n");
-
-            codeWriter.indent();
-            codeWriter.emit(code, true);
-            codeWriter.unindent();
-
-            codeWriter.emit("}\n");
+            codeWriter.emit(" {\n").indent().emit(code, true).unindent().emit("}\n");
         }
         codeWriter.popTypeVariables(typeVariables);
     }
@@ -194,10 +177,7 @@ public final class MethodSpec {
         if (this == o) {
             return true;
         }
-        if (o == null) {
-            return false;
-        }
-        if (getClass() != o.getClass()) {
+        if (!(o instanceof MethodSpec)) {
             return false;
         }
         return toString().equals(o.toString());
@@ -267,8 +247,7 @@ public final class MethodSpec {
         methodBuilder.addModifiers(modifiers);
 
         for (TypeParameterElement typeParameterElement : method.getTypeParameters()) {
-            TypeVariable var = (TypeVariable) typeParameterElement.asType();
-            methodBuilder.addTypeVariable(TypeVariableName.get(var));
+            methodBuilder.addTypeVariable(TypeVariableName.get((TypeVariable) typeParameterElement.asType()));
         }
 
         methodBuilder.returns(TypeName.get(method.getReturnType()));

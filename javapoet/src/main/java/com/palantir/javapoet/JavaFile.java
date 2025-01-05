@@ -199,19 +199,27 @@ public final class JavaFile {
             codeWriter.emit("\n");
         }
 
+        emitStaticImports(codeWriter);
+        emitImports(codeWriter);
+
+        typeSpec.emit(codeWriter, null, Collections.emptySet());
+
+        codeWriter.popPackage();
+    }
+
+    private void emitStaticImports(CodeWriter codeWriter) throws IOException {
         if (!staticImports.isEmpty()) {
             for (String signature : staticImports) {
                 codeWriter.emit("import static $L;\n", signature);
             }
             codeWriter.emit("\n");
         }
+    }
 
+    private void emitImports(CodeWriter codeWriter) throws IOException {
         int importedTypesCount = 0;
         for (ClassName className : new TreeSet<>(codeWriter.importedTypes().values())) {
-            // TODO(pkoenig): what about nested types like java.util.Map.Entry?
-            if (skipJavaLangImports
-                    && className.packageName().equals("java.lang")
-                    && !alwaysQualify.contains(className.simpleName())) {
+            if (shouldSkipImport(className)) {
                 continue;
             }
             codeWriter.emit("import $L;\n", className.withoutAnnotations());
@@ -221,10 +229,12 @@ public final class JavaFile {
         if (importedTypesCount > 0) {
             codeWriter.emit("\n");
         }
+    }
 
-        typeSpec.emit(codeWriter, null, Collections.emptySet());
-
-        codeWriter.popPackage();
+    private boolean shouldSkipImport(ClassName className) {
+        return skipJavaLangImports
+                && className.packageName().equals("java.lang")
+                && !alwaysQualify.contains(className.simpleName());
     }
 
     @Override
@@ -232,10 +242,7 @@ public final class JavaFile {
         if (this == o) {
             return true;
         }
-        if (o == null) {
-            return false;
-        }
-        if (getClass() != o.getClass()) {
+        if (!(o instanceof JavaFile)) {
             return false;
         }
         return toString().equals(o.toString());
